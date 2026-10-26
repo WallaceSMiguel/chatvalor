@@ -110,6 +110,7 @@
 <script>
   window.ME = {{ me|tojson }};
   window.TROCAR_SENHA = {{ 'true' if trocar_senha else 'false' }};
+  window.TEMPO_REAL = {{ 'true' if config.TEMPO_REAL else 'false' }};
 </script>
 <script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>
 <script src="{{ url_for('static', filename='comum.js') }}"></script>

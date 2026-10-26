@@ -81,7 +81,7 @@ $("#salvarSenha").onclick = async () => {
 if (window.TROCAR_SENHA) abrirModal("modalSenha");
 
 // conexão em tempo real
-const socket = io({ transports: ["websocket", "polling"] });
+const socket = window.TEMPO_REAL ? io({ transports: ["websocket", "polling"] }) : modoConsulta();
 socket.on("connect", () => $("#meuStatus")?.classList.add("on"));
 socket.on("disconnect", () => $("#meuStatus")?.classList.remove("on"));
 socket.on("forcar_saida", () => { location.href = "/logout"; });
@@ -89,6 +89,44 @@ socket.on("presenca", p => {
   $$(`[data-status="${p.user_id}"]`).forEach(s => s.classList.toggle("on", p.online));
   window.aoMudarPresenca && window.aoMudarPresenca(p);
 });
+
+// Sem WebSocket: imita o socket consultando o servidor a cada 3 s e enviando por HTTP.
+function modoConsulta() {
+  const ouvintes = {};
+  const disparar = (ev, d) => (ouvintes[ev] || []).forEach(f => f(d));
+  let desde = null, alt = "", nConversas = null, timer = null, rodando = false;
+  async function consultar() {
+    if (rodando) return;
+    rodando = true;
+    clearTimeout(timer);
+    try {
+      const q = desde === null ? "" : `?desde=${desde}&alt=${encodeURIComponent(alt)}`;
+      const r = await api("/api/novidades" + q);
+      if (nConversas !== null && r.conversas !== nConversas) disparar("conversa_nova", {});
+      nConversas = r.conversas;
+      if (desde !== null) {
+        (r.novas || []).forEach(m => disparar("mensagem", m));
+        (r.alteradas || []).forEach(m => disparar("mensagem_alterada", m));
+      }
+      desde = r.ultimo_id;
+      alt = r.agora;
+    } catch (e) { /* tenta de novo na próxima rodada */ }
+    rodando = false;
+    timer = setTimeout(consultar, document.visibilityState === "visible" ? 3000 : 10000);
+  }
+  setTimeout(consultar, 300);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") consultar(); });
+  return {
+    connected: false,
+    on(ev, f) { (ouvintes[ev] = ouvintes[ev] || []).push(f); },
+    emit(ev, dados, cb) {
+      if (!["enviar", "editar", "apagar"].includes(ev)) return;
+      api("/api/acao/" + ev, { method: "POST", body: dados })
+        .then(r => { cb && cb(r); consultar(); })
+        .catch(() => cb && cb({ ok: false }));
+    },
+  };
+}
 
 // ---------- foto de perfil (recorte circular com zoom e arrastar) ----------
 const Foto = (() => {

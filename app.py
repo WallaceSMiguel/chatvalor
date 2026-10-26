@@ -45,6 +45,8 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = carregar_secret()
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
 socketio = SocketIO(app, async_mode="threading", manage_session=False)
+# Sem WebSocket (ex.: plano grátis do PythonAnywhere) o navegador consulta o servidor a cada 3 s.
+app.config["TEMPO_REAL"] = os.environ.get("TEMPO_REAL", "1") != "0" and "PYTHONANYWHERE_DOMAIN" not in os.environ
 
 # usuários online: user_id -> quantidade de conexões abertas
 online = {}
@@ -905,6 +907,43 @@ def ws_digitando(dados):
     for i in membros_ids(cid):
         if i != uid:
             socketio.emit("digitando", {"conversa_id": cid, "user_id": uid, "nome": u["nome"]}, to=f"u{i}")
+
+
+# ---------- modo consulta (sem WebSocket) ----------
+ACOES_HTTP = {"enviar": ws_enviar, "editar": ws_editar, "apagar": ws_apagar}
+
+
+@app.post("/api/acao/<nome>")
+@login_obrigatorio
+def api_acao(nome):
+    """Mesmas ações do Socket.IO, por HTTP, para quando não há conexão em tempo real."""
+    f = ACOES_HTTP.get(nome)
+    if not f:
+        return jsonify(ok=True)
+    return jsonify(f(request.get_json(silent=True) or {}))
+
+
+@app.get("/api/novidades")
+@login_obrigatorio
+def api_novidades():
+    """Mensagens novas (id > desde) e alteradas (editada/apagada desde 'alt') nas conversas do usuário."""
+    uid = g.user["id"]
+    d = db()
+    resp = {"agora": agora(),
+            "conversas": d.execute("SELECT COUNT(*) FROM membros WHERE user_id=?", (uid,)).fetchone()[0]}
+    desde = request.args.get("desde", type=int)
+    if desde is None:
+        resp["ultimo_id"] = d.execute("SELECT COALESCE(MAX(id),0) FROM mensagens").fetchone()[0]
+        return jsonify(resp)
+    alt = request.args.get("alt", "")
+    filtro = " JOIN membros mb ON mb.conversa_id = m.conversa_id AND mb.user_id = ?"
+    novas = d.execute(SQL_MSG + filtro + " WHERE m.id > ? ORDER BY m.id LIMIT 200", (uid, desde)).fetchall()
+    alteradas = d.execute(SQL_MSG + filtro + " WHERE m.id <= ? AND (m.editada_em >= ? OR m.apagada_em >= ?)",
+                          (uid, desde, alt, alt)).fetchall()
+    resp["ultimo_id"] = novas[-1]["id"] if novas else desde
+    resp["novas"] = [msg_dict(m) for m in novas]
+    resp["alteradas"] = [dict(msg_dict(m), citacao_atualizada=citacao(m["id"])) for m in alteradas]
+    return jsonify(resp)
 
 
 def certificado_https():
