@@ -8,7 +8,7 @@
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" sizes="any">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='icone.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=3) }}">
 </head>
 <body>
 <header class="topo">
@@ -112,8 +112,8 @@
   window.TROCAR_SENHA = {{ 'true' if trocar_senha else 'false' }};
   window.TEMPO_REAL = {{ 'true' if config.TEMPO_REAL else 'false' }};
 </script>
-<script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>
-<script src="{{ url_for('static', filename='comum.js') }}"></script>
+{% if config.TEMPO_REAL %}<script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>{% endif %}
+<script src="{{ url_for('static', filename='comum.js', v=3) }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
