@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar · Valorização Chat</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" sizes="any">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icone.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="login-pagina">
+  <section class="login-lado">
+    <img class="logo-brilho" src="{{ url_for('static', filename='logo-escura.png') }}" alt="Valorização Assessoria Contábil">
+    <h1>Comunicação interna da <span>Valorização</span>, em um só lugar.</h1>
+    <p>Converse com a equipe da matriz e das unidades em tempo real, crie grupos por setor e compartilhe arquivos sem sair da rede do escritório.</p>
+    <ul>
+      <li>Conversas individuais e em grupo</li>
+      <li>Envio de arquivos, imagens e mensagens de voz</li>
+      <li>Reuniões pelo Microsoft Teams ou Google Meet</li>
+      <li>Histórico de mensagens armazenado no servidor</li>
+    </ul>
+  </section>
+  <section class="login-form">
+    <form method="post" autocomplete="on">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Valorização Assessoria Contábil">
+      <h2>Entrar</h2>
+      <p class="sub">Use o usuário fornecido pelo administrador.</p>
+      {% if erro %}<div class="erro-msg">{{ erro }}</div>{% endif %}
+      <div class="campo">
+        <label for="username">Usuário</label>
+        <input id="username" name="username" required autofocus autocapitalize="none">
+      </div>
+      <div class="campo">
+        <label for="senha">Senha</label>
+        <input id="senha" name="senha" type="password" required>
+      </div>
+      <button class="btn prim" type="submit">Entrar</button>
+      <p class="rodape-login">Valorização Assessoria Contábil · uso interno</p>
+    </form>
+  </section>
+</div>
+</body>
+</html>

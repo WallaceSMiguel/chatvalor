@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2E3135">
+  <title>{% block titulo %}Valorização Chat{% endblock %}</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" sizes="any">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icone.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topo">
+  <a class="marca" href="{{ url_for('index') }}" title="Valorização Chat">
+    <img class="logo-topo" src="{{ url_for('static', filename='logo-escura.png') }}" alt="Valorização Assessoria Contábil">
+    <img class="icone-topo" src="{{ url_for('static', filename='icone.png') }}" alt="Valorização">
+  </a>
+  <div class="titulo-app">Chat</div>
+  {% block busca %}{% endblock %}
+  <div class="topo-acoes">
+    <div class="perfil-btn">
+      <button class="icone-btn" id="btnPerfil" title="Perfil" style="width:auto;padding:0 2px">
+        <span id="meuAvatar" class="meu-avatar"></span>
+      </button>
+      <div class="menu" id="menuPerfil">
+        <div class="cab-menu">
+          <button class="avatar-editavel" id="meuAvatarMenu" title="Alterar foto"></button>
+          <div><b>{{ me.nome }}</b><small>@{{ me.username }}{% if me.cargo %} · {{ me.cargo }}{% endif %}</small></div>
+        </div>
+        <button id="btnFoto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Alterar foto de perfil</button>
+        <button id="btnSenha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Alterar senha</button>
+        {% if me.is_admin %}<a href="{{ url_for('admin') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>Administração</a>{% endif %}
+        <a href="{{ url_for('logout') }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg>Sair</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+  <nav class="rail">
+    <a href="{{ url_for('index') }}" class="{% if pagina == 'chat' %}ativo{% endif %}" id="railChat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v11H9l-5 4z"/></svg>
+      Chat<span class="badge" id="badgeTotal" style="display:none"></span>
+    </a>
+    <a href="{{ url_for('index') }}#grupos" id="railGrupos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.5"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M15 14.5c3 0 6 1.6 6 4.5"/></svg>
+      Equipes
+    </a>
+    <a href="{{ url_for('index') }}#reunioes" id="railReunioes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10.5l5-3v9l-5-3z"/></svg>
+      Reuniões<span class="badge" id="badgeReunioes" style="display:none"></span>
+    </a>
+    {% if me.is_admin %}
+    <a href="{{ url_for('admin') }}" class="{% if pagina == 'admin' %}ativo{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+      Admin
+    </a>
+    {% endif %}
+    <div class="espaco"></div>
+  </nav>
+  {% block conteudo %}{% endblock %}
+</div>
+
+<div class="modal-fundo" id="modalSenha">
+  <div class="modal">
+    <h3>{% if trocar_senha %}Defina sua nova senha{% else %}Alterar senha{% endif %}</h3>
+    <div class="conteudo">
+      {% if trocar_senha %}<p style="color:var(--cinza);margin-bottom:12px">Por segurança, troque a senha provisória antes de continuar.</p>{% endif %}
+      <div class="erro-msg" id="erroSenha"></div>
+      <div class="campo"><label>Senha atual</label><input type="password" id="senhaAtual"></div>
+      <div class="campo"><label>Nova senha</label><input type="password" id="senhaNova"></div>
+      <div class="campo"><label>Confirme a nova senha</label><input type="password" id="senhaConf"></div>
+    </div>
+    <div class="rodape">
+      {% if not trocar_senha %}<button class="btn sec" data-fechar>Cancelar</button>{% endif %}
+      <button class="btn prim" id="salvarSenha">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- foto de perfil: recorte e zoom -->
+<div class="modal-fundo" id="modalFoto">
+  <div class="modal" style="max-width:400px">
+    <h3 id="fotoTitulo">Foto de perfil</h3>
+    <div class="conteudo">
+      <div class="erro-msg" id="erroFoto"></div>
+      <div class="recorte" id="recorte">
+        <img id="recorteImg" alt="" draggable="false">
+        <div class="recorte-vazio" id="recorteVazio"></div>
+      </div>
+      <div class="zoom-linha" id="zoomLinha">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4M8.5 11h5"/></svg>
+        <input type="range" id="zoomFoto" min="1" max="4" step="0.01" value="1" aria-label="Zoom">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4M8.5 11h5M11 8.5v5"/></svg>
+      </div>
+      <p class="dica-foto" id="dicaFoto">Arraste a imagem para enquadrar o rosto. JPG, PNG ou WEBP, até 8 MB.</p>
+      <div class="foto-botoes">
+        <label class="btn sec"><input type="file" id="arquivoFoto" accept="image/jpeg,image/png,image/webp" hidden>Escolher imagem</label>
+        <button class="btn perigo" id="removerFoto">Remover foto</button>
+      </div>
+    </div>
+    <div class="rodape">
+      <button class="btn sec" data-fechar>Cancelar</button>
+      <button class="btn prim" id="salvarFoto" disabled>Salvar foto</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.ME = {{ me|tojson }};
+  window.TROCAR_SENHA = {{ 'true' if trocar_senha else 'false' }};
+</script>
+<script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>
+<script src="{{ url_for('static', filename='comum.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block titulo %}Administração · Valorização Chat{% endblock %}
+{% block conteudo %}
+<div class="admin-wrap">
+  <div class="admin-cab">
+    <div><h1>Administração</h1><p>Cadastre e gerencie quem pode usar o chat.</p></div>
+    <button class="btn prim" id="btnNovoUsuario">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Novo usuário
+    </button>
+  </div>
+
+  <div class="cards">
+    <div class="card"><small>Usuários ativos</small><b id="cUsuarios">–</b></div>
+    <div class="card"><small>Online agora</small><b id="cOnline">–</b></div>
+    <div class="card"><small>Mensagens hoje</small><b id="cHoje">–</b></div>
+    <div class="card"><small>Mensagens armazenadas</small><b id="cMensagens">–</b></div>
+    <div class="card"><small>Grupos</small><b id="cGrupos">–</b></div>
+  </div>
+
+  <div class="tabela-box">
+    <div class="ferr">
+      <input id="filtro" placeholder="Pesquisar por nome, usuário, cargo ou unidade">
+      <select id="filtroStatus" class="btn sec" style="font-weight:400">
+        <option value="">Todos</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Usuário</th><th class="esconde-mob">Cargo / Unidade</th><th>Status</th>
+          <th class="esconde-mob">Mensagens</th><th class="esconde-mob">Último acesso</th><th></th></tr></thead>
+        <tbody id="tabela"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-fundo" id="modalUsuario">
+  <div class="modal">
+    <h3 id="tituloUsuario">Novo usuário</h3>
+    <div class="conteudo">
+      <div class="erro-msg" id="erroUsuario"></div>
+      <div class="foto-admin" id="fotoAdmin">
+        <span id="fotoAdminAvatar"></span>
+        <div><b>Foto de perfil</b><small id="fotoAdminTexto"></small></div>
+        <button class="btn sec" id="btnFotoAdmin" type="button">Alterar foto</button>
+      </div>
+      <div class="campo"><label>Nome completo</label><input id="uNome"></div>
+      <div class="campo"><label>Usuário (login)</label><input id="uUsername" autocapitalize="none" placeholder="ex.: maria.silva"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="campo"><label>Cargo / setor</label><input id="uCargo" placeholder="ex.: Fiscal"></div>
+        <div class="campo"><label>Unidade</label>
+          <select id="uUnidade"><option value="">—</option><option>Matriz – Del Castilho</option><option>Caxias</option><option>Barra</option></select>
+        </div>
+      </div>
+      <div class="campo"><label id="lblSenha">Senha provisória</label><input id="uSenha" type="text" placeholder="mínimo 6 caracteres"></div>
+      <label class="check"><input type="checkbox" id="uAdmin"> Administrador</label>
+      <label class="check" id="linhaAtivo"><input type="checkbox" id="uAtivo" checked> Usuário ativo</label>
+    </div>
+    <div class="rodape">
+      <button class="btn perigo" id="btnExcluir" style="margin-right:auto">Excluir</button>
+      <button class="btn sec" data-fechar>Cancelar</button>
+      <button class="btn prim" id="salvarUsuario">Salvar</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let lista = [], editando = null;
+function dataBR(s) { return s ? new Date(s.replace(" ", "T")).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "nunca"; }
+async function carregar() {
+  const [u, r] = await Promise.all([api("/api/admin/usuarios"), api("/api/admin/resumo")]);
+  lista = u;
+  $("#cUsuarios").textContent = r.usuarios; $("#cOnline").textContent = r.online;
+  $("#cHoje").textContent = r.hoje; $("#cMensagens").textContent = r.mensagens; $("#cGrupos").textContent = r.grupos;
+  render();
+}
+function render() {
+  const t = $("#filtro").value.toLowerCase(), st = $("#filtroStatus").value;
+  const f = lista.filter(u => (u.nome + u.username + u.cargo + u.unidade).toLowerCase().includes(t) &&
+    (!st || (st === "ativo") === u.ativo) && !u.username.startsWith("removido_"));
+  $("#tabela").innerHTML = f.map(u => `<tr>
+    <td><div class="u-cel">${avatar(u)}<div><b>${esc(u.nome)}</b> ${u.is_admin ? '<span class="tag adm">Admin</span>' : ""}<small>@${esc(u.username)}</small></div></div></td>
+    <td class="esconde-mob">${esc(u.cargo || "—")}<br><small style="color:var(--cinza)">${esc(u.unidade || "")}</small></td>
+    <td>${u.ativo ? '<span class="tag ok">Ativo</span>' : '<span class="tag off">Inativo</span>'}</td>
+    <td class="esconde-mob">${u.total_msgs}</td>
+    <td class="esconde-mob">${dataBR(u.ultimo_acesso)}</td>
+    <td style="text-align:right"><button class="btn sec" data-edit="${u.id}">Editar</button></td></tr>`).join("")
+    || '<tr><td colspan="6" class="lista-vazia">Nenhum usuário encontrado.</td></tr>';
+}
+$("#filtro").oninput = render; $("#filtroStatus").onchange = render;
+$("#tabela").onclick = e => { const b = e.target.closest("[data-edit]"); if (b) abrir(lista.find(u => u.id === +b.dataset.edit)); };
+function abrir(u) {
+  editando = u || null;
+  $("#tituloUsuario").textContent = u ? "Editar usuário" : "Novo usuário";
+  $("#uNome").value = u?.nome || ""; $("#uUsername").value = u?.username || "";
+  $("#uUsername").disabled = !!u;
+  $("#uCargo").value = u?.cargo || ""; $("#uUnidade").value = u?.unidade || "";
+  $("#uSenha").value = "";
+  $("#lblSenha").textContent = u ? "Redefinir senha (deixe em branco para manter)" : "Senha provisória";
+  $("#uAdmin").checked = !!u?.is_admin; $("#uAtivo").checked = u ? u.ativo : true;
+  $("#linhaAtivo").style.display = u ? "" : "none";
+  $("#btnExcluir").style.display = u && u.id !== ME.id ? "" : "none";
+  $("#fotoAdmin").style.display = u ? "" : "none";
+  if (u) desenharFotoAdmin(u);
+  $("#erroUsuario").textContent = "";
+  abrirModal("modalUsuario");
+  setTimeout(() => $("#uNome").focus(), 50);
+}
+$("#btnNovoUsuario").onclick = () => abrir();
+function desenharFotoAdmin(u) {
+  $("#fotoAdminAvatar").innerHTML = avatar({ ...u, online: undefined }, "g");
+  $("#fotoAdminTexto").textContent = u.foto ? "Clique para trocar ou remover" : "Sem foto — aparecem as iniciais";
+}
+$("#btnFotoAdmin").onclick = () => {
+  const u = editando;
+  fecharModal("modalUsuario");
+  Foto.abrir({ usuario: u, urlEnvio: `/api/admin/usuarios/${u.id}/foto`,
+    aoMudar: async () => { await carregar(); abrir(lista.find(x => x.id === u.id)); } });
+};
+$("#salvarUsuario").onclick = async () => {
+  const dados = { nome: $("#uNome").value, cargo: $("#uCargo").value, unidade: $("#uUnidade").value,
+                  is_admin: $("#uAdmin").checked, senha: $("#uSenha").value };
+  try {
+    if (editando) await api(`/api/admin/usuarios/${editando.id}`, { method: "PUT", body: { ...dados, ativo: $("#uAtivo").checked } });
+    else await api("/api/admin/usuarios", { method: "POST", body: { ...dados, username: $("#uUsername").value } });
+    fecharModal("modalUsuario");
+    toast(editando ? "Usuário atualizado" : "Usuário criado", editando ? dados.nome : `Login: ${$("#uUsername").value} — a senha deverá ser trocada no primeiro acesso.`);
+    carregar();
+  } catch (e) { $("#erroUsuario").textContent = e.message; }
+};
+$("#btnExcluir").onclick = async () => {
+  if (!confirm(`Excluir ${editando.nome}? O acesso será removido, mas as mensagens já enviadas continuam no histórico.`)) return;
+  try { await api(`/api/admin/usuarios/${editando.id}`, { method: "DELETE" }); fecharModal("modalUsuario"); carregar(); }
+  catch (e) { $("#erroUsuario").textContent = e.message; }
+};
+socket.on("presenca", carregar);
+socket.on("usuarios_mudaram", carregar);
+carregar();
+</script>
+{% endblock %}

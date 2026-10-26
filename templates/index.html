@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block busca %}
+<div class="busca">
+  <input id="busca" placeholder="Pesquisar mensagens e arquivos" autocomplete="off">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg>
+  <div class="resultados" id="resultados"></div>
+</div>
+{% endblock %}
+
+{% block conteudo %}
+<div class="main-area">
+  <aside class="lista">
+    <div class="lista-topo">
+      <h2 id="tituloLista">Chat</h2>
+      <div>
+        <button class="icone-btn" id="btnNovoGrupo" title="Novo grupo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5 1.6 0 3 .5 4 1.3M18 13v6M15 16h6"/></svg>
+        </button>
+        <button class="icone-btn" id="btnNovaConversa" title="Nova conversa">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 4H5v15l4-3h10v-5"/><path d="M18 3l3 3-7 7h-3v-3z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="filtros">
+      <button class="ativo" data-filtro="todas">Todas</button>
+      <button data-filtro="nao_lidas">Não lidas</button>
+      <button data-filtro="direta">Pessoas</button>
+      <button data-filtro="grupo">Grupos</button>
+    </div>
+    <div class="conversas" id="listaConversas"></div>
+    <div class="conversas painel-reunioes" id="listaReunioes" style="display:none"></div>
+  </aside>
+
+  <main class="chat" id="chat">
+    <div class="boas-vindas" id="boasVindas">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="">
+      <h2>Olá, {{ me.nome.split(' ')[0] }}!</h2>
+      <p>Selecione uma conversa à esquerda ou inicie uma nova.</p>
+      <button class="btn prim" onclick="abrirNovaConversa()">Nova conversa</button>
+    </div>
+
+    <div id="painelConversa" style="display:none;flex:1;flex-direction:column;min-height:0">
+      <div class="chat-topo">
+        <button class="icone-btn voltar" id="btnVoltar" title="Voltar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <span id="convAvatar"></span>
+        <div class="tit"><h3 id="convNome"></h3><small id="convSub"></small></div>
+        <div class="abas esconde-mob"><span class="ativo">Chat</span><span>Arquivos</span></div>
+        <button class="btn-reuniao" id="btnReuniao" title="Marcar reunião no Teams ou no Meet">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10.5l5-3v9l-5-3z"/></svg><span>Reunião</span>
+        </button>
+        <button class="icone-btn" id="btnMembros" title="Participantes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.5"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M15 14.5c3 0 6 1.6 6 4.5"/></svg>
+        </button>
+      </div>
+      <div class="mensagens" id="mensagens"></div>
+      <div class="digitando" id="digitando"></div>
+      <div class="compor">
+        <div class="caixa" id="caixa">
+          <div class="resposta-barra" id="respostaBarra">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/></svg>
+            <div class="rb-texto"><b id="respostaNome"></b><span id="respostaResumo"></span></div>
+            <button class="icone-btn" id="cancelarResposta" title="Cancelar resposta (Esc)">✕</button>
+          </div>
+          <div class="anexo-previa" id="anexoPrevia">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H6v18h12V7z"/></svg>
+            <span id="anexoNome"></span>
+            <button class="icone-btn" id="removerAnexo" title="Remover">✕</button>
+          </div>
+          <textarea id="texto" rows="1" placeholder="Digite uma mensagem"></textarea>
+          <div class="barra" style="position:relative">
+            <button class="icone-btn" id="btnEmoji" title="Emoji">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2"/><circle cx="9" cy="10" r=".8" fill="currentColor"/><circle cx="15" cy="10" r=".8" fill="currentColor"/></svg>
+            </button>
+            <button class="icone-btn" id="btnAnexo" title="Anexar arquivo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 11l-8 8a5 5 0 0 1-7-7l8-8a3.5 3.5 0 0 1 5 5l-8 8a2 2 0 0 1-3-3l7-7"/></svg>
+            </button>
+            <input type="file" id="arquivo" hidden>
+            <div class="emoji-painel" id="emojiPainel"></div>
+            <div class="fill"></div>
+            <button class="enviar mic" id="btnMic" title="Gravar mensagem de voz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg></button>
+            <button class="enviar" id="btnEnviar" title="Enviar (Enter)" disabled>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 20l18-8L3 4l2 8zm2-8h8"/></svg>
+            </button>
+          </div>
+          <div class="gravacao" id="gravacao">
+            <button class="icone-btn" id="gravDescartar" title="Descartar gravação">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>
+            </button>
+            <span class="grav-ponto" id="gravPonto"></span>
+            <span class="grav-tempo" id="gravTempo">0:00</span>
+            <canvas class="grav-onda" id="gravOnda" height="36"></canvas>
+            <div class="grav-previa" id="gravPrevia"></div>
+            <button class="icone-btn grav-parar" id="gravParar" title="Parar e ouvir antes de enviar">
+              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            </button>
+            <button class="enviar grav-enviar" id="gravEnviar" title="Enviar mensagem de voz">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 20l18-8L3 4l2 8zm2-8h8"/></svg>
+            </button>
+          </div>
+        </div>
+        <input type="file" id="arquivoAudio" accept="audio/*" hidden>
+      </div>
+    </div>
+  </main>
+
+  <aside class="lateral" id="lateral">
+    <div class="lista-topo"><h2>Participantes</h2>
+      <button class="icone-btn" id="fecharLateral">✕</button></div>
+    <div id="listaMembros" style="flex:1;overflow-y:auto;padding:6px 0"></div>
+    <div style="padding:12px;display:flex;gap:8px;border-top:1px solid var(--linha)" id="acoesGrupo">
+      <button class="btn sec" id="btnAddMembros" style="flex:1">Adicionar</button>
+      <button class="btn perigo" id="btnSairGrupo">Sair</button>
+    </div>
+  </aside>
+</div>
+
+<!-- modal nova conversa / grupo -->
+<div class="modal-fundo" id="modalNova">
+  <div class="modal">
+    <h3 id="novaTitulo">Nova conversa</h3>
+    <div class="conteudo">
+      <div class="erro-msg" id="erroNova"></div>
+      <div class="campo" id="campoNomeGrupo"><label>Nome do grupo</label><input id="nomeGrupo" placeholder="Ex.: Fiscal — Unidade Barra"></div>
+      <div class="campo"><label>Pessoas</label><input id="filtroUsuarios" placeholder="Pesquisar por nome"></div>
+      <div class="selec-usuarios" id="selecUsuarios"></div>
+    </div>
+    <div class="rodape">
+      <button class="btn sec" data-fechar>Cancelar</button>
+      <button class="btn prim" id="confirmarNova">Iniciar</button>
+    </div>
+  </div>
+</div>
+
+<!-- marcar reunião (Teams / Meet) -->
+<div class="modal-fundo" id="modalReuniao">
+  <div class="modal modal-reuniao">
+    <h3>Marcar reunião</h3>
+    <div class="conteudo">
+      <div class="erro-msg" id="erroReuniao"></div>
+      <div class="plataformas" role="radiogroup" aria-label="Plataforma">
+        <button type="button" class="plataforma" data-plat="teams" role="radio">
+          <span class="pl-icone teams"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10.5l5-3v9l-5-3z"/></svg></span><b>Microsoft Teams</b>
+        </button>
+        <button type="button" class="plataforma" data-plat="meet" role="radio">
+          <span class="pl-icone meet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10.5l5-3v9l-5-3z"/></svg></span><b>Google Meet</b>
+        </button>
+      </div>
+      <div class="segmento" role="radiogroup" aria-label="Quando">
+        <button type="button" data-quando="agora" class="ativo">Agora</button>
+        <button type="button" data-quando="agendar">Agendar</button>
+      </div>
+      <div class="campo"><label for="reuTitulo">Assunto</label><input id="reuTitulo" maxlength="120"></div>
+      <div class="linha-agenda" id="linhaAgenda">
+        <div class="campo"><label for="reuData">Data</label><input type="date" id="reuData"></div>
+        <div class="campo"><label for="reuHora">Início</label><input type="time" id="reuHora" step="300"></div>
+        <div class="campo"><label for="reuDuracao">Duração</label>
+          <select id="reuDuracao"><option value="15">15 min</option><option value="30" selected>30 min</option><option value="45">45 min</option>
+            <option value="60">1 hora</option><option value="90">1h30</option><option value="120">2 horas</option></select></div>
+      </div>
+      <div class="campo"><label for="reuPauta">Pauta <small>(opcional)</small></label><textarea id="reuPauta" rows="2" maxlength="1000"></textarea></div>
+      <div class="passo-link">
+        <div class="passo"><span>1</span><div><button type="button" class="btn sec" id="reuGerar"></button><small id="reuDica"></small></div></div>
+        <div class="passo"><span>2</span><div class="campo" style="margin:0;flex:1">
+          <label for="reuLink">Cole aqui o link da reunião</label>
+          <div class="link-valida"><input id="reuLink" placeholder="https://..." autocomplete="off" spellcheck="false"><i id="reuLinkOk"></i></div>
+          <label class="check" style="margin:8px 0 0"><input type="checkbox" id="reuLembrar"> Lembrar como minha sala fixa</label>
+        </div></div>
+      </div>
+    </div>
+    <div class="rodape">
+      <button class="btn sec" data-fechar>Cancelar</button>
+      <button class="btn prim" id="reuEnviar">Enviar convite na conversa</button>
+    </div>
+  </div>
+</div>
+
+<!-- confirmar apagar para todos -->
+<div class="modal-fundo" id="modalApagar">
+  <div class="modal" style="max-width:420px">
+    <h3>Apagar para todos?</h3>
+    <div class="conteudo">
+      <p id="apagarTexto" style="color:var(--cinza);line-height:1.5"></p>
+      <div class="apagar-previa" id="apagarPrevia"></div>
+    </div>
+    <div class="rodape">
+      <button class="btn sec" data-fechar>Cancelar</button>
+      <button class="btn prim perigo-cheio" id="confirmarApagar">Apagar para todos</button>
+    </div>
+  </div>
+</div>
+
+<!-- histórico de versões (administrador) -->
+<div class="modal-fundo" id="modalHistorico">
+  <div class="modal">
+    <h3>Versões da mensagem</h3>
+    <div class="conteudo" id="historicoConteudo"></div>
+    <div class="rodape"><button class="btn prim" data-fechar>Fechar</button></div>
+  </div>
+</div>
+
+<div class="visualizador" id="visualizador"><img alt=""></div>
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='midia.js') }}"></script>
+<script src="{{ url_for('static', filename='chat.js') }}"></script>{% endblock %}

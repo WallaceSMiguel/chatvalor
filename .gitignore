@@ -1,0 +1,10 @@
+chat.db
+chat.db-*
+.secret_key
+certificado/
+uploads/*
+!uploads/.gitkeep
+.venv/
+venv/
+__pycache__/
+*.pyc
